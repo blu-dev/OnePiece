@@ -1,0 +1,92 @@
+<script src="assets/updating.js"></script>
+
+<style>
+    .column {
+        float: left;
+        width: 50%;
+    }
+</style>
+<body>
+    <div class="column">
+        <img src="assets/test.png" id="cardPreview" />
+    </div>
+    < class="column">
+        <!-- <form> -->
+        <label for="cardkind">Card Kind:</label>
+        <select name="cardkind" id="cardkind">
+            <option value="Leader">Leader</option>
+            <option value="Character">Character</option>
+            <option value="Stage">Stage</option>
+            <option value="Event">Event</option></select
+        ><br />
+        <label for="cardname">Card Name:</label>
+        <input
+            type="text"
+            id="cardname"
+            name="cardname"
+            value="Kouzuki Oden"
+        /><br />
+        <label for="attributes">Attributes:</label>
+        <input type="text" id="attributes" name="attributes" value="" /><br />
+        <label for="subtypes">Subtypes:</label>
+        <input
+            type="text"
+            id="subtypes"
+            name="subtypes"
+            value=""
+        /><br />
+        <label for="colors">Colors:</label>
+        <input type="text" id="colors" name="colors" value="Red/Green" /><br />
+        <label for="cost_life">Cost/Life:</label>
+        <input type="number" id="cost_life" name="cost_life" value="4" /><br />
+        <label for="haspower">Power:</label>
+        <input
+            type="checkbox"
+            id="haspower"
+            name="haspower"
+            checked="false"
+        /><input
+            type="number"
+            step="1000"
+            id="power"
+            name="power"
+            value="0"
+        /><br />
+        <label for="hascounter">Counter:</label>
+        <input
+            type="checkbox"
+            id="hascounter"
+            name="hascounter"
+            checked="false"
+        /><input
+            type="number"
+            step="1000"
+            id="counter"
+            name="counter"
+            value="0"
+        />
+        <br />
+        <label for="haseffect">Effect:</label>
+        <input
+            type="checkbox"
+            id="haseffect"
+            name="haseffect"
+            checked="false"
+        />
+        <textarea id="effect" name="effect" rows="6" cols="60"></textarea>
+        <br />
+        <label for="hastrigger">Trigger:</label>
+        <input
+            type="checkbox"
+            id="hastrigger"
+            name="hastrigger"
+            checked="false"
+        />
+        <textarea id="trigger" name="trigger" rows="6" cols="60"></textarea>
+        <br />
+        <button id="prevCard">Previous Card</button>
+        <button id="submit">Submit Changes</button>
+        <button id="nextCard">Next Card</button>
+        <!-- </form> -->
+    </div>
+</body>
