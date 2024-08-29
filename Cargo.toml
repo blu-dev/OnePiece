@@ -1,2 +1,2 @@
 [workspace]
-members = [ "data", "qa-tool", "runtime", "scraper" ]
+members = [ "data", "qa-tool", "qa-ui", "runtime", "scraper" ]

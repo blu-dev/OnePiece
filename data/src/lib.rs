@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, num::ParseIntError, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    num::ParseIntError,
+    str::FromStr,
+};
 use thiserror::Error;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -168,6 +172,12 @@ pub enum CardType {
 #[error("Invalid card type '{0}'")]
 pub struct ParseCardTypeError(String);
 
+impl Display for CardType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
 impl FromStr for CardType {
     type Err = ParseCardTypeError;
 
@@ -190,6 +200,12 @@ pub enum Color {
     Purple,
     Black,
     Yellow,
+}
+
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
 }
 
 #[derive(Error, Debug)]
@@ -220,6 +236,14 @@ macro_rules! decl_subtypes {
                 #[serde(rename = $val $(, alias = $alias)?)]
                 $name,
             )*
+        }
+
+        impl Subtype {
+            pub const ALL: &'static [Self] = &[
+                $(
+                    Self::$name,
+                )*
+            ];
         }
 
         #[derive(Error, Debug)]
@@ -390,6 +414,12 @@ pub enum Attribute {
     Special,
     Strike,
     Wisdom,
+}
+
+impl Display for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
 }
 
 #[derive(Error, Debug)]
