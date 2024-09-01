@@ -10,8 +10,29 @@ use thiserror::Error;
 pub enum SetId {
     Starter(usize),
     Booster(usize),
+    PremiumBooster(usize),
     Extra(usize),
     Promo,
+}
+
+impl Serialize for SetId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for SetId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+
+        Self::from_str(&string).map_err(|e| <D::Error as serde::de::Error>::custom(e))
+    }
 }
 
 impl Display for SetId {
@@ -19,6 +40,7 @@ impl Display for SetId {
         match self {
             Self::Starter(id) => write!(f, "ST{id:02}"),
             Self::Booster(id) => write!(f, "OP{id:02}"),
+            Self::PremiumBooster(id) => write!(f, "PRB{id:02}"),
             Self::Extra(id) => write!(f, "EB{id:02}"),
             Self::Promo => write!(f, "P"),
         }
@@ -49,6 +71,7 @@ impl FromStr for SetId {
             "ST" => Ok(Self::Starter(sub_id)),
             "OP" => Ok(Self::Booster(sub_id)),
             "EB" => Ok(Self::Extra(sub_id)),
+            "PR" => Ok(Self::PremiumBooster(sub_id)),
             other => Err(SetIdParseError::InvalidPrefix(other.to_string())),
         }
     }
@@ -183,10 +206,10 @@ impl FromStr for CardType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "LEADER" => Ok(Self::Leader),
-            "CHARACTER" => Ok(Self::Character),
-            "STAGE" => Ok(Self::Stage),
-            "EVENT" => Ok(Self::Event),
+            s if s.eq_ignore_ascii_case("LEADER") => Ok(Self::Leader),
+            s if s.eq_ignore_ascii_case("CHARACTER") => Ok(Self::Character),
+            s if s.eq_ignore_ascii_case("STAGE") => Ok(Self::Stage),
+            s if s.eq_ignore_ascii_case("EVENT") => Ok(Self::Event),
             other => Err(ParseCardTypeError(other.to_string())),
         }
     }
@@ -293,6 +316,7 @@ decl_subtypes! {
     BlackbeardPirates -> "Blackbeard Pirates",
     BluejamPirates -> "Bluejam Pirates",
     BonneyPirates -> "Bonney Pirates",
+    Botanist -> "Botanist",
     BowinIsland -> "Bowin Island",
     BuggyPirates -> "Buggy Pirates",
     BuggysDeivery -> "Buggy's Delivery",
@@ -319,6 +343,7 @@ decl_subtypes! {
     FoolshoutIsland -> "Foolshout Island",
     FormerArlongPirates -> "Former Arlong Pirates",
     FormerBaroqueWorks -> "Former Baroque Works",
+    FormerCP9 -> "Former CP9",
     FormerNavy -> "Former Navy",
     FormerRocksPirates -> "Former Rocks Pirates",
     FormerRogerPirates -> "Former Roger Pirates",
@@ -340,6 +365,7 @@ decl_subtypes! {
     Homies -> "Homies",
     ImpelDown -> "Impel Down",
     JailerBeast -> "Jailer Beast",
+    Jaya -> "Jaya",
     JellyfishPirates -> "Jellyfish Pirates",
     Journalist -> "Journalist",
     KidPirates -> "Kid Pirates",
@@ -352,11 +378,13 @@ decl_subtypes! {
     LandOfWano -> "Land of Wano",
     LongRingLongLand -> "Long Ring Long Land",
     LuluciaKingdom -> "Lulucia Kingdom",
+    Lunarian -> "Lunarian",
     MaryGeoise -> "Mary Geoise",
     MechaIsland -> "Mecha Island",
     Merfolk -> "Merfolk",
     Minks -> "Minks",
     MonkeyMountainAlliance -> "Monkey Mountain Alliance",
+    Monsters -> "Monsters",
     MountainBandits -> "Mountain Bandits",
     MuggyKingdom -> "Muggy Kingdom",
     MugiwaraChase -> "Mugiwara Chase",
@@ -373,6 +401,7 @@ decl_subtypes! {
     RedHairedPirates -> "Red-Haired Pirates",
     RevolutionaryArmy -> "Revolutionary Army",
     RumbarPirates -> "Rumbar Pirates",
+    Seraphim -> "Seraphim",
     Smile -> "SMILE" "Smile",
     Scientist -> "Scientist",
     ShandianWarrior -> "Shandian Warrior",
@@ -444,10 +473,10 @@ impl FromStr for Attribute {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CardData {
     pub id: CardId,
+    pub release_set: SetId,
     pub rarity: Rarity,
     pub ty: CardType,
     pub name: String,
-    pub image_url: String,
     pub image_name: String,
     pub cost_life: usize,
     pub power: Option<usize>,

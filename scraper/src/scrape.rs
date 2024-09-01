@@ -1,4 +1,4 @@
-use data::{Attribute, CardData, CardId, CardType, Color, Rarity, Subtype};
+use data::{Attribute, CardData, CardId, CardType, Color, Rarity, SetId, Subtype};
 use scraper::{ElementRef, Html};
 use std::{any::Any, path::Path, str::FromStr};
 
@@ -93,7 +93,7 @@ fn collect_all_elements_with_name<'a>(el: ElementRef<'a>, name: &str) -> Vec<Ele
     out
 }
 
-pub fn card_data_from_el(el: ElementRef) -> CardData {
+pub fn card_data_from_el(el: ElementRef, set_id: SetId) -> CardData {
     let dd = get_child_element_by_name(el, "dd").unwrap();
     let front_col = get_child_element_by_class(dd, "frontCol").unwrap();
     let img = get_child_element_by_name(front_col, "img").unwrap();
@@ -209,17 +209,19 @@ pub fn card_data_from_el(el: ElementRef) -> CardData {
     let spans = collect_all_elements_with_name(div, "span");
     let name = get_child_element_by_class(dt, "cardName").unwrap();
 
-    let id = spans[0].text().next().unwrap().to_string();
-    let rarity = spans[1].text().next().unwrap().to_string();
-    let ty = spans[2].text().next().unwrap().to_string();
-    let name = name.text().next().unwrap().to_string();
+    let id = spans[0].text().next().unwrap().trim().to_string();
+    let rarity = spans[1].text().next().unwrap().trim().to_string();
+    let ty = spans[2].text().next().unwrap().trim().to_string();
+    let name = name.text().next().unwrap().trim().to_string();
+
+    println!("Parsing {}", id);
 
     CardData {
         id: CardId::from_str(&id).unwrap(),
+        release_set: set_id,
         rarity: Rarity::from_str(&rarity).unwrap(),
         ty: CardType::from_str(&ty).unwrap(),
         name,
-        image_url: format!("https://en.onepiece-cardgame.com/cardlist/{local_url}"),
         image_name: local_url.rsplit_once('/').unwrap().1.to_string(),
         cost_life: cost_life.unwrap(),
         power: power.unwrap(),
@@ -240,9 +242,65 @@ pub fn card_data_from_el(el: ElementRef) -> CardData {
     }
 }
 
-static SET_IDS: &[u32] = &[
-    569201, 569107, 569106, 569105, 569104, 569103, 569102, 569101, 569014, 569013, 569012, 569011,
-    569010, 569009, 569008, 569007, 569006, 569005, 569004, 569003, 569002, 569001, 569901, 569801,
+static ENGLISH_SET_IDS: &[(u32, SetId)] = &[
+    (569201, SetId::Extra(1)),
+    (569107, SetId::Booster(7)),
+    (569106, SetId::Booster(6)),
+    (569105, SetId::Booster(5)),
+    (569104, SetId::Booster(4)),
+    (569103, SetId::Booster(3)),
+    (569102, SetId::Booster(2)),
+    (569101, SetId::Booster(1)),
+    (569014, SetId::Starter(14)),
+    (569013, SetId::Starter(13)),
+    (569012, SetId::Starter(12)),
+    (569011, SetId::Starter(11)),
+    (569010, SetId::Starter(10)),
+    (569009, SetId::Starter(9)),
+    (569008, SetId::Starter(8)),
+    (569007, SetId::Starter(7)),
+    (569006, SetId::Starter(6)),
+    (569005, SetId::Starter(5)),
+    (569004, SetId::Starter(4)),
+    (569003, SetId::Starter(3)),
+    (569002, SetId::Starter(2)),
+    (569001, SetId::Starter(1)),
+];
+
+static JAPANESE_SET_IDS: &[(u32, SetId)] = &[
+    (556701, SetId::Promo),
+    (556901, SetId::Promo),
+    (556801, SetId::Promo),
+    (556301, SetId::PremiumBooster(1)),
+    (556201, SetId::Extra(1)),
+    (556107, SetId::Booster(8)),
+    (556107, SetId::Booster(7)),
+    (556106, SetId::Booster(6)),
+    (556105, SetId::Booster(5)),
+    (556104, SetId::Booster(4)),
+    (556103, SetId::Booster(3)),
+    (556102, SetId::Booster(2)),
+    (556101, SetId::Booster(1)),
+    (556020, SetId::Starter(20)),
+    (556019, SetId::Starter(19)),
+    (556018, SetId::Starter(18)),
+    (556017, SetId::Starter(17)),
+    (556016, SetId::Starter(16)),
+    (556015, SetId::Starter(15)),
+    (556014, SetId::Starter(14)),
+    (556013, SetId::Starter(13)),
+    (556012, SetId::Starter(12)),
+    (556011, SetId::Starter(11)),
+    (556010, SetId::Starter(10)),
+    (556009, SetId::Starter(9)),
+    (556008, SetId::Starter(8)),
+    (556007, SetId::Starter(7)),
+    (556006, SetId::Starter(6)),
+    (556005, SetId::Starter(5)),
+    (556004, SetId::Starter(4)),
+    (556003, SetId::Starter(3)),
+    (556002, SetId::Starter(2)),
+    (556001, SetId::Starter(1)),
 ];
 
 fn distribute<F, T, R>(
@@ -292,63 +350,84 @@ where
     })
 }
 
-pub fn scrape() {
+fn scrape_ids(ids: &[(u32, SetId)], tld: &str, path: &Path) {
+    std::fs::create_dir_all(path.join("html")).unwrap();
+    std::fs::create_dir_all(path.join("images")).unwrap();
     use std::fmt::Write;
-    let non_cached_ids = SET_IDS
+    let non_cached_ids = ids
         .iter()
-        .filter(|id| !Path::new(&format!("./cache/{id}.html")).exists())
-        .copied()
+        .filter(|(id, _)| !path.join(format!("html/{id}.html")).exists())
+        .map(|(id, _)| *id)
         .collect();
 
     distribute(non_cached_ids, 16, |id| {
         let response = ureq::get(&format!(
-            "https://en.onepiece-cardgame.com/cardlist/?series={id}"
+            "https://{tld}.onepiece-cardgame.com/cardlist/?series={id}"
         ))
         .call()
         .unwrap()
         .into_string()
         .unwrap();
-        std::fs::write(format!("./cache/{id}.html"), &response).unwrap();
+        println!("Fetched https://{tld}.onepiece-cardgame.com/cardlist/?series={id}");
+        std::fs::write(path.join(format!("html/{id}.html")), &response).unwrap();
     })
     .unwrap();
 
     let mut all_cards = vec![];
-    for id in SET_IDS {
-        let html = std::fs::read_to_string(format!("./cache/{id}.html")).unwrap();
+    for (url_id, set_id) in ids {
+        let html = std::fs::read_to_string(path.join(format!("html/{url_id}.html"))).unwrap();
         let html = Html::parse_document(&html);
+        println!("Parsed html/{url_id}.html");
 
         let cardlist = find_cardlist_element(html.root_element());
         let maincol = find_maincol(cardlist);
         let resultcol = find_resultcol(maincol);
         let raw_cards = gather_cards(resultcol);
 
-        all_cards.extend(raw_cards.into_iter().map(card_data_from_el));
+        all_cards.extend(
+            raw_cards
+                .into_iter()
+                .map(|card| card_data_from_el(card, *set_id)),
+        );
     }
 
     let non_cached_images = all_cards
         .iter()
-        .filter(|card| !Path::new(&format!("./cache/images/{}", card.image_name)).exists())
-        .map(|card| (&card.image_url, &card.image_name))
+        .filter(|card| !path.join(format!("images/{}", card.image_name)).exists())
+        .map(|card| {
+            (
+                format!(
+                    "https://{tld}.onepiece-cardgame.com/images/cardlist/card/{}",
+                    card.image_name
+                ),
+                &card.image_name,
+            )
+        })
         .collect();
 
     distribute(non_cached_images, 32, |(url, name)| {
         let mut buffer = vec![];
-        ureq::get(url)
+        ureq::get(&url)
             .call()
             .unwrap()
             .into_reader()
             .read_to_end(&mut buffer)
             .unwrap();
-        std::fs::write(format!("./cache/images/{name}"), &buffer).unwrap();
+        println!("Downloaded {url}");
+        std::fs::write(path.join(format!("images/{name}")), &buffer).unwrap();
     })
     .unwrap();
 
     let mut output = String::new();
     all_cards.sort_by_key(|a| a.id);
-    all_cards.dedup_by_key(|a| a.id);
     for card in all_cards.iter() {
         writeln!(&mut output, "{}", serde_json::to_string(card).unwrap()).unwrap();
     }
 
-    std::fs::write("./cache/card_db_2.jsonl", &output).unwrap();
+    std::fs::write(path.join("card_db.jsonl"), &output).unwrap()
+}
+
+pub fn scrape() {
+    scrape_ids(ENGLISH_SET_IDS, "en", Path::new("./cache/en"));
+    scrape_ids(JAPANESE_SET_IDS, "asia-en", Path::new("./cache/jp"));
 }

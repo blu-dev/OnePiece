@@ -1,0 +1,14 @@
+[package]
+name = "qa-egui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+data = { version = "0.1.0", path = "../data" }
+eframe = "0.28.1"
+egui = "0.28.1"
+egui_dock = "0.13.0"
+egui_extras = { version = "0.28.1", features = ["file", "image"] }
+image = { version = "0.25.2", features = ["png"] }
+serde_json = "1.0.127"
+strum = "0.26.3"
